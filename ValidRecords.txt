@@ -1,0 +1,59 @@
+import java.io.IOException;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.NullWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.lib.input.*;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+
+public class ValidRecords 
+{
+	public static void main(String args[])throws Exception
+	{
+		Configuration conf = new Configuration();
+		conf.addResource(new Path("/usr/local/hadoop-2.6.0/etc/hadoop/core-site.xml"));
+		conf.addResource(new Path("/usr/local/hadoop-2.6.0/etc/hadoop/hdfs-site.xml"));
+		
+		Job job = new Job(conf,"Task1");
+		job.setMapOutputKeyClass(Text.class);
+		job.setMapOutputValueClass(NullWritable.class);
+		job.setOutputKeyClass(Text.class);
+		job.setOutputValueClass(NullWritable.class);
+		job.setNumReduceTasks(0);
+		job.setMapperClass(Task1Mapper.class);
+		
+		FileInputFormat.addInputPath(job, new Path("/user/acadgild/f1.txt"));
+		FileOutputFormat.setOutputPath(job, new Path("/user/acadgild/f2"));
+		
+		Path output = new Path("/user/acadgild/f2");
+		output.getFileSystem(conf).delete(output);
+		
+		job.waitForCompletion(true);
+	}
+
+}
+
+class Task1Mapper extends Mapper<LongWritable,Text,Text,NullWritable> 
+{
+	NullWritable nw = NullWritable.get();
+	public void map(LongWritable key,Text value,Context context) throws IOException, InterruptedException
+	{
+		System.out.println("Input key value pair :"+key+" "+value);
+		String token[]=value.toString().split(",");
+		String compname = token[0];
+		String product = token[1];
+		if(compname.equals("NA")||product.equals("NA"))
+		{
+			System.out.println("Invalid Records :"+key+" "+value);
+			context.write(value, nw);
+		}
+		else
+		{
+			System.out.println("Valid Records :"+key+" "+value);
+		}
+	}
+}
